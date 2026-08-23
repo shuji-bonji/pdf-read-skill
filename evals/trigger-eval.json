@@ -1,0 +1,23 @@
+[
+  {"query": "この500ページの白書PDFから、再生可能エネルギーについて書いてある章だけ抜き出してほしい。/Users/bonji/docs/hakusho2026.pdf", "should_trigger": true},
+  {"query": "取引先から届いた仕様書のPDF、目次だけ見て構造を教えて。全部読むと長いので", "should_trigger": true},
+  {"query": "スキャンしたままの議事録PDFがあるんだけど、テキストが選択できない。内容を読み取ってまとめてくれる？", "should_trigger": true},
+  {"query": "このPDFの表をMarkdownの表にして。ページを跨いでる表があるので注意して", "should_trigger": true},
+  {"query": "PDFから何も抽出されずに空になるんだけど、このファイル本当に空なの？", "should_trigger": true},
+  {"query": "行政の告示PDF、2段組でテキスト抽出すると行が混ざる。ちゃんとした順番で読みたい", "should_trigger": true},
+  {"query": "この論文PDFの第3章と参考文献だけ読んで要点をまとめて", "should_trigger": true},
+  {"query": "帳票形式のPDFの記載内容を読み取ってJSONに起こしてほしい", "should_trigger": true},
+  {"query": "PDFの中の図面が読みたい。テキストじゃなくて図として見てほしい", "should_trigger": true},
+  {"query": "月報PDFが12個ある。それぞれから売上の数字だけ拾って一覧にして", "should_trigger": true},
+
+  {"query": "取引先から契約書のPDFが届いた。署名が本物か確認してほしい", "should_trigger": false},
+  {"query": "この請求書PDF、改ざんされてないかチェックして", "should_trigger": false},
+  {"query": "電帳法で保存する請求書を受入監査したい", "should_trigger": false},
+
+  {"query": "月次報告書をPDF/UA準拠で作りたい。元原稿はMarkdown", "should_trigger": false},
+  {"query": "この報告書を品質保証付きでPDFにして納品したい", "should_trigger": false},
+  {"query": "請求書PDFに元データのXMLを添付したPDF/A-3を作りたい", "should_trigger": false},
+
+  {"query": "PDFを12個結合してページ番号を振り直したい", "should_trigger": false},
+  {"query": "ISO 32000でToUnicodeが必須になる条件を教えて", "should_trigger": false}
+]
