@@ -28,7 +28,7 @@
 
 | MCP | 必須 | 備考 |
 |---|---|---|
-| [pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) **v0.12.0+** | **必須** | v0.12.0 で本 Skill が分岐に使う抽出可能性（#21）・`render_page`（#23）・`next` 欄（#24）が入った |
+| [pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) **v0.14.0+** | **必須** | v0.12.0 で本 Skill が分岐に使う抽出可能性（#21）・`render_page`（#23）・`next` 欄（#24）が入った。v0.14.0 で応答に `scope`（どこまで読んだか）が付き、行われなかった読みの項目が `null` になった —— Phase 0 の分岐はこれを読む。v0.14.0 未満でも動くが、**利用者パスワード付きの文書で暗号化の停止が働かない** |
 | [pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 条文照会（§9.10.1 / §9.10.2） |
 
 `render_page` は reader の optionalDependencies `@hyzyla/pdfium`（PDFium の WASM 版）を使います。未導入でも他のツールはすべて動き、Skill は該当ページを「未読」として申告します。

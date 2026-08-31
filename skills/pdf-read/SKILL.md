@@ -27,7 +27,7 @@ pdf-publish が「送り出す PDF を保証する」のに対し、こちらは
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-reader-mcp（**v0.12.0+ 推奨**） | **必須** | 全経路。**v0.12.0 でテキスト抽出可能性の 3 値化（#21）・render_page（#23）・summarize の next 欄（#24）が入った**。それ未満では Phase 0 の分岐材料が無いため、後述の縮退手順で読む |
+| pdf-reader-mcp（**v0.14.0+ 推奨**） | **必須** | 全経路。**v0.12.0 でテキスト抽出可能性の 3 値化（#21）・render_page（#23）・summarize の next 欄（#24）が入った**。それ未満では Phase 0 の分岐材料が無いため、後述の縮退手順で読む。**v0.14.0 で応答に `scope`（どこまで読んだか）が付き、読みが行われなかった項目が `null` になった** —— Phase 0 の分岐はこれを読む |
 | pdf-spec-mcp | 任意 | 抽出可能性の根拠条文（§9.10.1 / §9.10.2）の照会 |
 
 pdf-reader-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-reader-mcp@latest` の
@@ -41,7 +41,21 @@ pdf-reader-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-reader-
 
 ### Phase 0 — 測る（summarize）
 
-`summarize` を `response_format: "json"` で 1 回呼ぶ。読み取りに使う観測は:
+`summarize` を `response_format: "json"` で 1 回呼ぶ。
+
+🔴 **数字より先に `scope` を読む。** v0.14.0 の `summarize` は 4 つの別々の読み
+（文書情報・1 ページ目のテキスト・画像数・抽出可能性の観測）から作られ、どれも
+単独で失敗する。行われなかった読みの項目は **`null`** であり、`0` でも `false` でも
+`""` でもない。`null` を「無かった」として扱うと、観測していないことが観測の顔をする。
+
+| `scope` の項目 | `failed` のときに何が `null` になるか |
+|---|---|
+| `metadata` | `metadata`（**丸ごと**）と `hasText` |
+| `textPreview` | `textPreview` と `hasText` |
+| `imageCount` | `imageCount` |
+| `extractabilityObservation` | `textExtractability` と `unreadablePages` |
+
+そのうえで、読み取りに使う観測は:
 
 | フィールド | 使い方 |
 |---|---|
@@ -52,17 +66,33 @@ pdf-reader-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-reader-
 | `unreadablePages` | 状態と原因（フォント名・条項）付き。Phase 4 の対象ページ一覧になる |
 | `next` | 観測から機械的に決まる次の一手。**各行が前提の観測名を名乗る**ので、前提を確認してから従う |
 
-v0.12.0 未満の reader には `textExtractability` / `next` が無い。その場合は
-`hasText` と `imageCount` だけで推定することになるが、**空ページとスキャンページを
-区別できない**旨を Read Report に明記する（推定を観測のように書かない）。
+🔴 **`metadata` が `null` のときは、上の 3 行が読めない。** `pageCount` も
+`isEncrypted` も `isTagged` も無いので、それらを前提にした分岐はどれも成立しない。
+`scope.metadata` の `code` と `reason` を読んで Phase 1 へ進む。
+`next` も同じ理由で空になる —— **空の `next` は「やることが無い」ではない。**
+
+`textExtractability` が `null`（観測が行われなかった）なら、`extracted` でもなければ
+`no_text_layer` でもない。**読めるとも読めないとも言えない**ので、Phase 3 で実際に
+`read_text` を試し、その結果を Read Report に「観測なしで読んだ」と書く。
+
+v0.12.0 未満の reader には `textExtractability` / `next` が無く、v0.14.0 未満には
+`scope` が無い。その場合は `hasText` と `imageCount` だけで推定することになるが、
+**空ページとスキャンページを区別できない**旨を Read Report に明記する
+（推定を観測のように書かない）。
 
 ### Phase 1 — 分岐
 
 Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに経路を分ける:
 
-- `isEncrypted: true` → **停止**。reader は復号しない（§7.6.2 の暗号文は
-  どのツールでも過小報告になる）。パスワードを知っているなら qpdf 等での復号を
-  案内し、復号後のファイルで最初からやり直す
+- `isEncrypted: true`、**または `scope.metadata.code` が `ENCRYPTED_PDF`** → **停止**。
+  reader は復号しない（§7.6.2 の暗号文はどのツールでも過小報告になる）。
+  パスワードを知っているなら qpdf 等での復号を案内し、復号後のファイルで最初から
+  やり直す。
+  🔴 **2 つは同じ文書の別の状態である。** 利用者パスワードが空の文書は pdfjs が
+  開けるので `metadata.isEncrypted: true` が返る。空でない利用者パスワードが
+  設定された文書は**鍵が導けない**（ISO 32000-2 §7.6.4.3.2）ので pdfjs が開けず、
+  `metadata` は `null` になり、暗号化されていることは `scope` にしか現れない。
+  前者だけを見ていると、後者はこの分岐を素通りする
 - `textExtractability` が `no_text_layer` / `not_extractable` → 該当ページは
   **Phase 4（画像経路）**。extracted のページが混在するなら、そちらは Phase 2/3 で読む
 - `isTagged: true` → **Phase 2（構造経路）**
@@ -113,16 +143,19 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
 ```markdown
 ## Read Report
 
-- 対象: <ファイル名>（<総ページ数> ページ）
+- 対象: <ファイル名>（<総ページ数> ページ。読めなければ「不明」）
 - 読んだ範囲: <ページ列挙 or 全ページ> / 経路: <構造 | 絞り込み | 画像 | 混在>
 - 使ったツール: <ツール名の列挙（バージョンが得られれば併記）>
-- テキスト抽出可能性: <extracted N / no_text_layer N / ...（reader の申告を転記）>
+- 行われなかった読み: <reader の `scope` で `failed` だった項目と、その理由。無ければ「なし」>
+- テキスト抽出可能性: <extracted N / no_text_layer N / ...（reader の申告を転記）。観測が行われなかったなら「観測なし」>
 - 読めなかった箇所: <ページと理由（原因フォント・暗号化・render 不可など）。無ければ「なし」>
 - 切り詰め: <あり（対処: 分割読み） | なし>
 ```
 
 **「読めなかった箇所」を空にしない** — 読めなかった箇所が本当に無いときだけ
 「なし」と書く。未確認のまま空欄にすると「確認して問題なし」と誤読される。
+**「行われなかった読み」も同じ**で、reader が `scope` で `failed` と言った項目は
+そのまま転記する。`null` だった項目を 0 件・無しとして報告しない。
 
 ## この Skill がやらないこと
 
