@@ -60,7 +60,7 @@ pdf-reader-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-reader-
 | フィールド | 使い方 |
 |---|---|
 | `metadata.pageCount` | 50 超なら Phase 3 で必ず search_text から入る |
-| `metadata.isEncrypted` | true なら Phase 1 で停止 |
+| `metadata.isEncrypted` | **true だけでは停止の根拠にならない。** 扱いは Phase 1（reader の版で分かれる） |
 | `metadata.isTagged` | true なら Phase 2（構造経路）を第一候補にする |
 | `textExtractability` | 文書全体の畳み込み。extracted 以外なら `unreadablePages` を見る |
 | `unreadablePages` | 状態と原因（フォント名・条項）付き。Phase 4 の対象ページ一覧になる |
@@ -84,15 +84,36 @@ v0.12.0 未満の reader には `textExtractability` / `next` が無く、v0.14.
 
 Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに経路を分ける:
 
-- `isEncrypted: true`、**または `scope.metadata.code` が `ENCRYPTED_PDF`** → **停止**。
-  reader は復号しない（§7.6.2 の暗号文はどのツールでも過小報告になる）。
-  パスワードを知っているなら qpdf 等での復号を案内し、復号後のファイルで最初から
-  やり直す。
-  🔴 **2 つは同じ文書の別の状態である。** 利用者パスワードが空の文書は pdfjs が
-  開けるので `metadata.isEncrypted: true` が返る。空でない利用者パスワードが
-  設定された文書は**鍵が導けない**（ISO 32000-2 §7.6.4.3.2）ので pdfjs が開けず、
-  `metadata` は `null` になり、暗号化されていることは `scope` にしか現れない。
-  前者だけを見ていると、後者はこの分岐を素通りする
+- **暗号化文書** → 停止するかどうかは、**鍵が導けたかどうか**で分かれる。
+  `isEncrypted: true` を見ただけで停止しない。
+
+  | 文書の状態 | reader v0.15.0 の応答 | 判断 |
+  |---|---|---|
+  | 利用者パスワードが**空** | 成功応答（`isError` なし）。`isEncrypted: true` だが `scope` は 4 項目とも `read` で、`textExtractability` は `extracted`。本文も `search_text` も読める | **停止しない。** Phase 2/3 へ進み、暗号化されていた旨を Read Report に書く |
+  | 利用者パスワードが**空でない** | **`isError: true`**。本文は `scope` を持つ応答ではなく `error` / `code` / `hint` / `detail.cause` だけの JSON で、`code` は `ENCRYPTED_PDF` | **停止**。パスワードを知っているなら qpdf 等での復号を案内し、復号後のファイルで最初からやり直す |
+
+  🔴 **`isError` の応答を、フィールドが欠けた成功応答として読まない。** 空でない
+  利用者パスワードの文書は鍵が導けない（ISO 32000-2 §7.6.4.3.2）ため、ファイル内の
+  間接オブジェクトを 1 つも読めない。`summarize` の 4 つの読みも `read_text` の
+  2 つの読みも全部失敗するので、reader は部分応答ではなくエラーを返す。
+  **`metadata` も `scope` も無い。** 暗号化されていることは本文の `code` にだけ現れる。
+
+  🔴 **reader v0.15.0 の `next` は、ここだけ観測と食い違う**（v0.15.1 で修正済み）。
+  0.15.0 は `isEncrypted: true` の文書に、実際には復号して読めていても
+  "content streams and strings are ciphertext to this server (ISO 32000-2 §7.6.2)
+  … Decrypt the file first" という行を付ける。`textExtractability` が `extracted` で
+  `unreadablePages` が空なら、**この行には従わない**（観測が上、助言が下）。
+  0.15.1 以降は "the file encryption key was derived from the empty user password
+  … No separate decryption step is needed" に変わり、`isTagged` などの助言も
+  伏せられなくなる。
+
+  🔴 **v0.15.0 未満は挙動が違う。** 0.14.0 までは §9.10.1 の観測に pdf-lib を
+  `ignoreEncryption` で使っていたため、空パスワードの文書でも本文は読めるが観測が
+  立たず、各ページが `state: "not_observed"`（理由は "the document is encrypted, so
+  its content streams could not be read here"）になる。読んだうえで「観測なし」と
+  申告する。空でないパスワードの文書は `isError` にはならず、`metadata: null` +
+  `scope.metadata.code: "ENCRYPTED_PDF"` の部分応答になる。掴んでいる版が 0.14.x
+  なら、上の表ではなくこちらで分岐する
 - `textExtractability` が `no_text_layer` / `not_extractable` → 該当ページは
   **Phase 4（画像経路）**。extracted のページが混在するなら、そちらは Phase 2/3 で読む
 - `isTagged: true` → **Phase 2（構造経路）**
