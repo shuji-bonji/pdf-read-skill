@@ -66,6 +66,11 @@ pdf-reader-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-reader-
 | `unreadablePages` | 状態と原因（フォント名・条項）付き。Phase 4 の対象ページ一覧になる |
 | `next` | 観測から機械的に決まる次の一手。**各行が前提の観測名を名乗る**ので、前提を確認してから従う |
 
+🔴 **`next` が空でも、目的が箇所抽出なら `search_text` を呼ぶ。** reader の `next` は
+`pageCount > 50` のときだけ `search_text` を出す（v0.15.x 実測、UC07）。20 ページで
+「この言葉がある箇所」を聞いても `next` は空のままである。**空の `next` は
+「search_text が不要」ではない。** Phase 3 の 1 を実行する。
+
 🔴 **`metadata` が `null` のときは、上の 3 行が読めない。** `pageCount` も
 `isEncrypted` も `isTagged` も無いので、それらを前提にした分岐はどれも成立しない。
 `scope.metadata` の `code` と `reason` を読んで Phase 1 へ進む。
@@ -90,7 +95,7 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
   | 文書の状態 | reader v0.15.0 の応答 | 判断 |
   |---|---|---|
   | 利用者パスワードが**空** | 成功応答（`isError` なし）。`isEncrypted: true` だが `scope` は 4 項目とも `read` で、`textExtractability` は `extracted`。本文も `search_text` も読める | **停止しない。** Phase 2/3 へ進み、暗号化されていた旨を Read Report に書く |
-  | 利用者パスワードが**空でない** | **`isError: true`**。本文は `scope` を持つ応答ではなく `error` / `code` / `hint` / `detail.cause` だけの JSON で、`code` は `ENCRYPTED_PDF` | **停止**。パスワードを知っているなら qpdf 等での復号を案内し、復号後のファイルで最初からやり直す |
+  | 利用者パスワードが**空でない** | **`isError: true`**。本文は `scope` を持つ応答ではなく `error` / `code` / `hint` / `detail.cause` だけの JSON で、`code` は `ENCRYPTED_PDF` | **停止**。パスワードを知っているなら qpdf 等での複号を案内し、複号後のファイルで最初からやり直す |
 
   🔴 **`isError` の応答を、フィールドが欠けた成功応答として読まない。** 空でない
   利用者パスワードの文書は鍵が導けない（ISO 32000-2 §7.6.4.3.2）ため、ファイル内の
@@ -99,7 +104,7 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
   **`metadata` も `scope` も無い。** 暗号化されていることは本文の `code` にだけ現れる。
 
   🔴 **reader v0.15.0 の `next` は、ここだけ観測と食い違う**（v0.15.1 で修正済み）。
-  0.15.0 は `isEncrypted: true` の文書に、実際には復号して読めていても
+  0.15.0 は `isEncrypted: true` の文書に、実際には複号して読めていても
   "content streams and strings are ciphertext to this server (ISO 32000-2 §7.6.2)
   … Decrypt the file first" という行を付ける。`textExtractability` が `extracted` で
   `unreadablePages` が空なら、**この行には従わない**（観測が上、助言が下）。
@@ -133,8 +138,8 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
 
 ### Phase 3 — 絞り込み経路（タグなし・大きい文書）
 
-1. `pageCount` > 50、または目的が「〜について書いてある箇所」なら、
-   **必ず `search_text` から入る**。ヒットしたページ番号が pages 指定になる
+1. `pageCount` > 50、**または目的が「〜について書いてある箇所」**なら、
+   **必ず `search_text` から入る**。`next` が空でも省かない。ヒットしたページ番号が pages 指定になる
 2. `read_text` に**明示の `pages`** を渡して読む。タグなし多段組は
    `split_columns: 2 | 3`、帳票・様式は `compact_whitespace: true`
 3. `search_text` が 0 件のときは、結果の unsearchablePages / note を読む。
@@ -155,6 +160,11 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
 4. `render_page` が使えない（optionalDependencies 未導入）なら、その旨と
    インストール方法（`npm install @hyzyla/pdfium`）を伝えて、該当ページを
    「未読」として Read Report に載せる
+
+🔴 **`no_text_layer` の検体は writer だけでは作れない。** `create_text_pdf` 系は
+テキスト層を書く。同一ファイルを `merge_pdfs` するとキーワードが全ユニットに
+複製される。評価で画像のみページを測るときは、公開のスキャン標本を使うか、
+フィラーページとキーワードページを**別ファイル**で作ってから結合する。
 
 ### Phase 5 — Read Report
 
