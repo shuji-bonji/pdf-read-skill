@@ -95,7 +95,7 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
   | 文書の状態 | reader v0.15.0 の応答 | 判断 |
   |---|---|---|
   | 利用者パスワードが**空** | 成功応答（`isError` なし）。`isEncrypted: true` だが `scope` は 4 項目とも `read` で、`textExtractability` は `extracted`。本文も `search_text` も読める | **停止しない。** Phase 2/3 へ進み、暗号化されていた旨を Read Report に書く |
-  | 利用者パスワードが**空でない** | **`isError: true`**。本文は `scope` を持つ応答ではなく `error` / `code` / `hint` / `detail.cause` だけの JSON で、`code` は `ENCRYPTED_PDF` | **停止**。パスワードを知っているなら qpdf 等での複号を案内し、複号後のファイルで最初からやり直す |
+  | 利用者パスワードが**空でない** | **`isError: true`**。本文は `scope` を持つ応答ではなく `error` / `code` / `hint` / `detail.cause` だけの JSON で、`code` は `ENCRYPTED_PDF` | **停止**。パスワードを知っているなら qpdf 等での復号を案内し、復号後のファイルで最初からやり直す |
 
   🔴 **`isError` の応答を、フィールドが欠けた成功応答として読まない。** 空でない
   利用者パスワードの文書は鍵が導けない（ISO 32000-2 §7.6.4.3.2）ため、ファイル内の
@@ -104,7 +104,7 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
   **`metadata` も `scope` も無い。** 暗号化されていることは本文の `code` にだけ現れる。
 
   🔴 **reader v0.15.0 の `next` は、ここだけ観測と食い違う**（v0.15.1 で修正済み）。
-  0.15.0 は `isEncrypted: true` の文書に、実際には複号して読めていても
+  0.15.0 は `isEncrypted: true` の文書に、実際には復号して読めていても
   "content streams and strings are ciphertext to this server (ISO 32000-2 §7.6.2)
   … Decrypt the file first" という行を付ける。`textExtractability` が `extracted` で
   `unreadablePages` が空なら、**この行には従わない**（観測が上、助言が下）。
