@@ -30,7 +30,7 @@ Core rule: **an empty extraction result is not evidence that a page has no text.
 
 | MCP | Required | Notes |
 |---|---|---|
-| [pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) **v0.14.0+** | **Yes** | v0.12.0 adds text extractability (#21), `render_page` (#23) and the `next` field (#24) this Skill branches on. v0.14.0 adds `scope` — which of the readings behind an answer were done — and makes a field whose reading did not happen `null`; Phase 0 branches on that. It still runs on earlier versions, but **the stop for an encrypted document does not fire on a password-protected file** there |
+| [pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) **v0.15.1+ recommended** (runs on v0.14.0+) | **Yes** | v0.12.0 adds text extractability (#21), `render_page` (#23) and the `next` field (#24) this Skill branches on. v0.14.0 adds `scope` — which of the readings behind an answer were done — and makes a field whose reading did not happen `null`; Phase 0 branches on that. It still runs on earlier versions, but **the stop for an encrypted document does not fire on a password-protected file** there. From v0.15.0 an encrypted document whose key can be derived from the empty user password is decrypted and read; v0.15.1 stops the `next` field of `summarize` from telling the caller to decrypt such a document first |
 | [pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | Optional | Clause lookups (§9.10.1 / §9.10.2) |
 
 `render_page` needs the reader's optional dependency `@hyzyla/pdfium` (PDFium compiled to WebAssembly). Without it, every other tool works and the Skill reports the affected pages as unread.
