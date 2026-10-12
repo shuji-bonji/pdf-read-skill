@@ -20,9 +20,9 @@ The phases:
 | 0 — Measure | `summarize` (JSON): page count, tagged?, encrypted?, per-page **text extractability** (ISO 32000-2 §9.10.1), and the reader's own `next` suggestions |
 | 1 — Branch | encrypted → stop; `no_text_layer` / `not_extractable` pages → Phase 4; tagged → Phase 2; else → Phase 3 |
 | 2 — Structure route | `extract_structured_text` (logical content order, real headings), `extract_tables` (page-spanning tables stay whole) |
-| 3 — Narrow & extract | `search_text` first on large documents, then `read_text` with an explicit page range (`split_columns` for untagged multi-column, `compact_whitespace` for forms) |
+| 3 — Narrow & extract | `search_text` first on large documents, then `read_text` with an explicit page range **widened by one page on each side** — paragraphs, tables and footnotes cross page breaks, so a hit page read alone can start or end mid-sentence (`split_columns` for untagged multi-column, `compact_whitespace` for forms) |
 | 4 — Image route | `render_page` (PDFium-WASM) for pages that cannot be read as text; a vision model reads the pixels |
-| 5 — Read Report | which pages were read, by which route, and **what could not be read and why** |
+| 5 — Read Report | which pages were read, by which route, **what could not be read and why**, and **where the read range was cut at a page boundary** (checked / unchecked — never left blank) |
 
 Core rule: **an empty extraction result is not evidence that a page has no text.** The reader reports per-page extractability (`extracted` / `no_text_layer` / `not_extractable` / `not_observed`), and this Skill refuses to conclude "not in the document" over pages it could not read.
 

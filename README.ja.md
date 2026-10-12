@@ -18,9 +18,9 @@
 | 0 — 測る | `summarize`（JSON）: ページ数・タグ・暗号化・ページごとの**テキスト抽出可能性**（ISO 32000-2 §9.10.1）・reader 自身の `next` 提案 |
 | 1 — 分岐 | 暗号化 → 停止 / `no_text_layer`・`not_extractable` → Phase 4 / タグ付き → Phase 2 / それ以外 → Phase 3 |
 | 2 — 構造経路 | `extract_structured_text`（論理順・本物の見出し）・`extract_tables`（ページ跨ぎの表も 1 つ） |
-| 3 — 絞り込み経路 | 大きな文書は `search_text` で絞ってから、明示の pages で `read_text`（タグなし多段組は `split_columns`、帳票は `compact_whitespace`） |
+| 3 — 絞り込み経路 | 大きな文書は `search_text` で絞ってから、明示の pages で `read_text`。**ヒットページの前後 1 ページを足して読む**（段落・表・脚注はページ境界をまたぐので、ヒットページだけでは冒頭や末尾が文の途中になる）。タグなし多段組は `split_columns`、帳票は `compact_whitespace` |
 | 4 — 画像経路 | テキストとして読めないページを `render_page`（PDFium-WASM）で描画し、視覚で読む |
-| 5 — Read Report | 読んだ範囲・使った経路・**読めなかった箇所とその理由** |
+| 5 — Read Report | 読んだ範囲・使った経路・**読めなかった箇所とその理由**・**ページ境界で切れた箇所**（確認済みか未確認かを必ず書く） |
 
 中核原則: **空の抽出結果は「テキストが無い」の証拠ではない。** reader はページごとの抽出可能性（`extracted` / `no_text_layer` / `not_extractable` / `not_observed`）を返し、この Skill は読めていないページの上で「文書に無い」と結論しません。
 
