@@ -95,7 +95,7 @@ Phase 0 の観測で経路を選ぶ。複数該当なら該当ページごとに
   | 文書の状態 | reader v0.15.0 の応答 | 判断 |
   |---|---|---|
   | 利用者パスワードが**空** | 成功応答（`isError` なし）。`isEncrypted: true` だが `scope` は 4 項目とも `read` で、`textExtractability` は `extracted`。本文も `search_text` も読める | **停止しない。** Phase 2/3 へ進み、暗号化されていた旨を Read Report に書く |
-  | 利用者パスワードが**空でない** | **`isError: true`**。本文は `scope` を持つ応答ではなく `error` / `code` / `hint` / `detail.cause` だけの JSON で、`code` は `ENCRYPTED_PDF` | **停止**。パスワードを知っているなら qpdf 等での復号を案内し、復号後のファイルで最初からやり直す |
+  | 利用者パスワードが**空でない** | **`isError: true`**。本文は `scope` を持つ応答ではなく `error` / `code` / `retryable` / `hint` / `detail.cause` だけの JSON で、`code` は `ENCRYPTED_PDF`、`retryable` は `false`（reader は `password` を受け取らないので、同じ呼び出しを繰り返しても読めない）。`next_actions` は付かない（2026-11-06 に reader 0.20.1 で確かめた） | **停止**。パスワードを知っているなら qpdf 等での復号を案内し、復号後のファイルで最初からやり直す |
 
   🔴 **`isError` の応答を、フィールドが欠けた成功応答として読まない。** 空でない
   利用者パスワードの文書は鍵が導けない（ISO 32000-2 §7.6.4.3.2）ため、ファイル内の
